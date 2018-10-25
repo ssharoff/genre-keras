@@ -5,7 +5,8 @@ This is a simple neural classifier which aims at providing text classification u
 `It won the SCBWI Golden Kite Award for best nonfiction book of 1999 and has sold about 50,000 copies.`
 
 converts into a mixed representation as
-It won the PROPN ADJ NOUN NOUN for best NOUN NOUN of [\#] and has sold about [\#] NOUN. 
+
+`It won the PROPN ADJ NOUN NOUN for best NOUN NOUN of [\#] and has sold about [\#] NOUN. '
 
 The system of categories for training follows:
 ```
@@ -23,5 +24,12 @@ The system of categories for training follows:
 
 
 The neural implementation is based on Keras/Tensorflow and started from the example code from [https://www.depends-on-the-definition.com/classify-toxic-comments-on-wikipedia]
+
+The arguments for the script are self-explanatory. The format for the training file follows FastText: one line per document.  The annotation file is a tab-separated table giving for each training document its probabilities for each label (similarly to the probabilities assigned by the topic models, except that this is used in supervised mode).  The most common words and the POS tags for the less frequent ones are coming from a dictionary:
+
+`num word pos`
+
+This can be obtained, for example, for an available CONLLU file by
+`cut -f 2,4 -s CONLLU.file | sort | uniq -c | sort -nsr >CONLLU.num`
 
 
