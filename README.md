@@ -23,13 +23,24 @@ The system of categories for training follows:
 [http://corpus.leeds.ac.uk/serge/publications/2018-ftd.pdf]
 
 
-The neural implementation is based on Keras/Tensorflow and started from the example code from [https://www.depends-on-the-definition.com/classify-toxic-comments-on-wikipedia]
+The neural implementation is based on Keras/Tensorflow.  It started from the example code from [https://www.depends-on-the-definition.com/classify-toxic-comments-on-wikipedia]
 
-The arguments for the script are self-explanatory. The format for the training file follows FastText: one line per document.  The annotation file is a tab-separated table giving for each training document its probabilities for each label (similarly to the probabilities assigned by the topic models, except that this is used in supervised mode).  The most common words and the POS tags for the less frequent ones are coming from a dictionary:
+CNN and bi-LSTM versions have been added, but they didn't help with producing better classifier.  And they are much slower to train.
+
+
+The arguments for the script are self-explanatory (run `classifier.py -h`).  A typical invocation would be:
+
+`classifier.py -1 en.vec.gz -i en.ol.xz -a en-reduced.csv -d en.brieftag.num --cv_folds 10`
+
+The format for the training file follows FastText: one line per document.  The annotation file is a tab-separated table giving for each training document its probabilities for each label (similarly to the probabilities assigned to a document by the topic models, except that this classifier uses them in a supervised mode).  The most common words and the POS tags for the less frequent ones are coming from a dictionary:
 
 `num word pos`
+`109833303 the  DET`
+`55324951 and  CCONJ`
+` 254488 equipment  NOUN`
 
 This can be obtained, for example, for an available CONLLU file by
+
 `cut -f 2,4 -s CONLLU.file | sort | uniq -c | sort -nsr >CONLLU.num`
 
 
