@@ -39,7 +39,7 @@ parser.add_argument( '--dropout', type=float, default=0.2)
 parser.add_argument( '--valsplit', type=float, default=0.05)
 parser.add_argument('-s', '--seed', type=int, default=42)
 parser.add_argument('-c', '--cv_folds', type=int, default=0)
-parser.add_argument('-k', '--topk', type=int, default=3, help='number of predicted labels to output')
+parser.add_argument('-k', '--topk', type=int, default=2, help='number of predicted labels to output')
 parser.add_argument('-v', '--verbosity', type=int, default=1)
 
 outname=re.sub(' ','=','_'.join(sys.argv))
@@ -135,34 +135,36 @@ if args.cv_folds>0:
         kfold_X_test = x_train[test_index]
         kfold_y_test = y_train.values[test_index]
         kfold_y_train = y_train.values[train_index]
+        backend.clear_session()
         model=createmodel(args.mname)
 
         hist = model.fit(kfold_X_train, kfold_y_train, batch_size=args.batch_size, epochs=args.epochs, validation_split=args.valsplit, verbose=args.verbosity)
         predict_t[test_index] = model.predict(kfold_X_test, batch_size=args.batch_size, verbose=args.verbosity)
-        np.savetxt(outname+'.pred.mat',predict_t)
-        with open(outname+'.pred',"w") as outf:
-            for fscores in predict_t:
-                outstr=['__label__%s %.3f' % (y_train.columns[i], fscores[i])  for i in np.argsort(-fscores)[:args.topk]]
-                print('\t'.join(outstr), file=outf)
+        #np.savetxt(outname+'.pred.mat',predict_t)
+        if not args.testfile:
+            with open(outname+'.pred',"w") as outf:
+                for fscores in predict_t:
+                    outstr=['__label__%s %.3f' % (y_train.columns[i], fscores[i])  for i in np.argsort(-fscores)[:args.topk]]
+                    print('\t'.join(outstr), file=outf)
         score=metrics.pairwise.cosine_similarity(kfold_y_test, predict_t[test_index]).mean()
         scores_t.append(score)
         if args.verbosity>0:
             print('Cosine similarity %.3f' % score, file=sys.stderr)
-        backend.clear_session()
     if args.verbosity>0:
         print('Total CV score (%d folds) is %.3f (+/- %0.3f)' % (args.cv_folds,np.mean(scores_t), 2*np.std(scores_t)), file=sys.stderr)
-else:
+#else:
+if args.verbosity>0:
+    print('Building a model for the full set', file=sys.stderr)
+#model=createmodel(args.mname)
+#hist = model.fit(x_train, y_train, batch_size=args.batch_size, epochs=args.epochs, validation_split=args.valsplit, verbose=args.verbosity)
+if args.testfile:
     if args.verbosity>0:
-        print('Building a model for the full set', file=sys.stderr)
-    model=createmodel(args.mname)
-    hist = model.fit(x_train, y_train, batch_size=args.batch_size, epochs=args.epochs, validation_split=args.valsplit, verbose=args.verbosity)
+        print('Predicting on the test set', file=sys.stderr)
     if args.testfile:
-        if args.verbosity>0:
-            print('Predicting on the test set into %s.pred' % outname, file=sys.stderr)
-        f=sys.stdin if args.testfile=='-' else open(args.testfile)
+        f=sys.stdin if args.testfile=='-' else ut.myopen(args.testfile)
         outf=open(outname+'.pred',"w")
         for l in f:
-            X_testdoc=ut.mixedstr(l.lower(),dictlist,frqlist)
+            X_testdoc=ut.mixedstr(l,dictlist,frqlist)
             x_testdoc=[]
             for w in X_testdoc:
                 if not w in w2i:
@@ -173,8 +175,8 @@ else:
             for fscores in predict_t:
                 outstr=['__label__%s %.3f' % (y_train.columns[i], fscores[i])  for i in np.argsort(-fscores)[:args.topk]]
                 print('\t'.join(outstr), file=outf)
-    # model.save(outname+'.hd5')
-    # pickle.dump(w2i,open(outname+'w2i.pkl',"wb"))
+#model.save(outname+'.hd5')
+#pickle.dump(w2i,open(outname+'w2i.pkl',"wb"))
 # x = load_model(args.method+'.hd5')
 # y_hat=x.predict(x_test)
 
