@@ -30,7 +30,7 @@ CNN and bi-LSTM versions have been added, but they didn't help with producing a 
 
 The arguments for the script are self-explanatory (run `classifier.py -h`).  A typical invocation would be:
 
-`classifier.py -1 en.vec.gz -i en.ol.xz -a en-reduced.csv -d en.brieftag.num --cv_folds 10`
+`classifier.py -1 en.vec.gz -i en.ol -a en-reduced.csv -d en.brieftag.num --cv_folds 10`
 
 The format for the training file follows FastText: one line per document.  The annotation file is a tab-separated table giving for each training document its probabilities for each label (similarly to the probabilities assigned to a document by the topic models, except that this classifier uses them in a supervised mode).  The most common words and the POS tags for the less frequent ones are coming from a dictionary:
 
