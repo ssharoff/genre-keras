@@ -23,7 +23,7 @@ from sklearn import metrics
 from sklearn.model_selection import KFold
 
 parser = argparse.ArgumentParser(description="A Keras Model for Genre Classification")
-parser.add_argument('-m', '--mname', type=str, default='FT',help='Model type')
+parser.add_argument('--mname', type=str, default='FT', help='Model type')
 parser.add_argument('-1', '--embeddings', type=str, help='source embeddings')
 parser.add_argument('-i', '--inputfile', type=str, help='one-doc-per-line training corpus')
 parser.add_argument('-t', '--testfile', type=str, help='one-doc-per-line test only corpus')
@@ -33,6 +33,8 @@ parser.add_argument('-f', '--frqlimit', type=int, default=1500, help='how many w
 parser.add_argument('-x', '--maxlen', type=int, default=400, help='to shorten docs')
 parser.add_argument('-g', '--gensplit', type=int, default=0, help='to generate extra examples if longer than maxlen')
 parser.add_argument('-w', '--wordlist', type=str, help='extra words to add to the lexicon')
+parser.add_argument('-l', '--loss', type=str, default='cosine', help='loss for training from keras')
+parser.add_argument('-m', '--metrics', type=str, default='mae', help='metrics from keras')
 parser.add_argument('-b', '--batch_size', type=int, default=64)
 parser.add_argument('-e', '--epochs', type=int, default=10)
 parser.add_argument( '--dropout', type=float, default=0.2)
@@ -120,9 +122,9 @@ def createmodel(mname='FT'):
     x = Dropout(args.dropout)(x)
     output = Dense(y_train.shape[1], activation='sigmoid')(x)
     model = Model(inputs=inp, outputs=output)
-    model.compile(loss='binary_crossentropy', 
+    model.compile(loss=args.loss, 
               optimizer=Adam(0.01),
-              metrics=['mse']) #cosine as our output is a vector
+                  metrics=[args.metrics]) #cosine and mae because our output is a vector
     return(model)
 
 if args.cv_folds>0:
