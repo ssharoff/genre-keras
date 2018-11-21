@@ -33,7 +33,7 @@ parser.add_argument('-f', '--frqlimit', type=int, default=1500, help='how many w
 parser.add_argument('-x', '--maxlen', type=int, default=400, help='to shorten docs')
 parser.add_argument('-g', '--gensplit', type=int, default=0, help='to generate extra examples if longer than maxlen')
 parser.add_argument('-w', '--wordlist', type=str, help='extra words to add to the lexicon')
-parser.add_argument('-l', '--loss', type=str, default='cosine', help='loss for training from keras')
+parser.add_argument('-l', '--loss', type=str, default='binary_crossentropy', help='loss for training from keras')
 parser.add_argument('-m', '--metrics', type=str, default='mae', help='metrics from keras')
 parser.add_argument('-b', '--batch_size', type=int, default=64)
 parser.add_argument('-e', '--epochs', type=int, default=10)
@@ -117,6 +117,13 @@ def createmodel(mname='FT'):
         x = GlobalMaxPooling1D()(x)
     elif mname=='bilstm':
         x = Bidirectional(LSTM(100))(x)
+    elif mname=='bilstma': #bilstm with attention, see https://github.com/tsterbak/keras_attention
+        d = 0.5
+        rd = 0.5
+        x = SpatialDropout1D(0.5)(x)
+        bilstm = Bidirectional(LSTM(units=128, return_sequences=True, dropout=d,
+                                    recurrent_dropout=rd))(x)
+        x, attn = AttentionWeightedAverage(return_attention=True)(x)
     else:
         x = GlobalMaxPooling1D()(x) # a simple imitation of fasttext
     x = Dropout(args.dropout)(x)
