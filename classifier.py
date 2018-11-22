@@ -28,7 +28,7 @@ from sklearn import metrics
 from sklearn.model_selection import KFold
 
 parser = argparse.ArgumentParser(description="A Keras Model for Genre Classification")
-parser.add_argument('--mname', type=str, default='FT', help='Model type')
+parser.add_argument('--mname', type=str, default='bilstma', help='Model type')
 parser.add_argument('-1', '--embeddings', type=str, help='source embeddings')
 parser.add_argument('-i', '--inputfile', type=str, help='one-doc-per-line training corpus')
 parser.add_argument('-t', '--testfile', type=str, help='one-doc-per-line test only corpus')
