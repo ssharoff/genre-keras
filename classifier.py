@@ -3,7 +3,7 @@
 
 # Copyright (C) 2018  Serge Sharoff
 # This program is free software under GPL 3, see http://www.gnu.org/licenses/
-# A genre classifier in Keras, an expansion of
+# A genre classifier in Keras, an expansion of the idea from
 # https://www.depends-on-the-definition.com/classify-toxic-comments-on-wikipedia
 
 import sys, re, pickle, random, os
@@ -226,11 +226,11 @@ if args.cv_folds>0:
             print('Cosine similarity %.3f' % score, file=sys.stderr)
     if args.verbosity>0:
         print('Total CV score (%d folds) is %.3f (+/- %0.3f)' % (args.cv_folds,np.mean(scores_t), 2*np.std(scores_t)), file=sys.stderr)
-#else:
-if args.verbosity>0:
-    print('Building a model for the full set', file=sys.stderr)
-#model=createmodel(args.mname)
-#hist = model.fit(x_train, y_train, batch_size=args.batch_size, epochs=args.epochs, validation_split=args.valsplit, verbose=args.verbosity)
+else:
+    if args.verbosity>0:
+        print('Building a model for the full set', file=sys.stderr)
+    model=createmodel(args.mname)
+    hist = model.fit(x_train, y_train.values, batch_size=args.batch_size, epochs=args.epochs, validation_split=args.valsplit, verbose=args.verbosity)
 if args.testfile:
     if args.verbosity>0:
         print('Predicting on the test set', file=sys.stderr)
