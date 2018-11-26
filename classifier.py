@@ -6,6 +6,9 @@
 # A genre classifier in Keras, an expansion of the idea from
 # https://www.depends-on-the-definition.com/classify-toxic-comments-on-wikipedia
 
+import time
+starttime=int(time.time())
+
 import sys, re, pickle, random, os
 import pandas as pd
 import numpy as np
@@ -90,7 +93,8 @@ if not sp.shape[0]==len(w2i):
     for w in w2i:
         if sp.shape[0]<=w2i[w]:
             print(w, file=sys.stderr)
-print('Average train sequence length: {}'.format(np.mean(list(map(len, x_train)), dtype=int)), file=sys.stderr)
+if args.verbosity>0:
+    print('Average train sentence length: %d' % np.mean(list(map(len, x_train)), dtype=int), file=sys.stderr)
 
 if args.gensplit>0:
     for i in range(len(x_train)):
@@ -106,6 +110,9 @@ if args.gensplit>0:
         print('New doc set is %d' % len(x_train), file=sys.stderr)
 
 x_train = sequence.pad_sequences(x_train, maxlen=args.maxlen)
+loadtime=int(time.time())
+if args.verbosity>0:
+    print('Load time: %d sec' % (loadtime-starttime), file=sys.stderr)
 
 class AttentionWeightedAverage(Layer):
     """
@@ -231,6 +238,10 @@ else:
         print('Building a model for the full set', file=sys.stderr)
     model=createmodel(args.mname)
     hist = model.fit(x_train, y_train.values, batch_size=args.batch_size, epochs=args.epochs, validation_split=args.valsplit, verbose=args.verbosity)
+traintime=int(time.time())
+if args.verbosity>0:
+    print('Train time: %d sec' % (traintime-loadtime), file=sys.stderr)
+
 if args.testfile:
     if args.verbosity>0:
         print('Predicting on the test set', file=sys.stderr)
@@ -253,6 +264,10 @@ if args.testfile:
 #pickle.dump(w2i,open(outname+'w2i.pkl',"wb"))
 # x = load_model(args.method+'.hd5')
 # y_hat=x.predict(x_test)
+testtime=int(time.time())
+if args.verbosity>0:
+    print('Test time: %d sec' % (testtime-traintime), file=sys.stderr)
+
 
 # import matplotlib.pyplot as plt
 # plt.style.use("ggplot")
