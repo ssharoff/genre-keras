@@ -25,7 +25,7 @@ The system of categories for training follows:
 
 The neural implementation is based on Keras/Tensorflow.  It started from the example code from [https://www.depends-on-the-definition.com/classify-toxic-comments-on-wikipedia]
 
-CNN and bi-LSTM versions have been added, but they didn't help with producing a better classifier.  Also they are much slower to train.
+This implements a FastText like architecture. Later CNN and bi-LSTM versions have been added, but they didn't help with producing a better classifier. However, a bi-LSTM model with attention showed the best results, so this is the default setting now.
 
 
 The arguments for the script are self-explanatory (run `classifier.py -h`).  A typical invocation would be:
