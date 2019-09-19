@@ -18,7 +18,7 @@ import argparse
 
 from keras.preprocessing import sequence
 from keras.models import Model, Input, load_model
-from keras.layers import Dense, Embedding, GlobalMaxPooling1D, SpatialDropout1D, Conv1D, MaxPooling1D, LSTM, Bidirectional, Dropout, concatenate, InputSpec
+from keras.layers import Dense, Embedding, GlobalMaxPooling1D, SpatialDropout1D, Conv1D, MaxPooling1D, LSTM, Bidirectional, Dropout, concatenate, InputSpec, CuDNNLSTM
 
 from keras.optimizers import Adam
 from keras import backend
@@ -52,7 +52,7 @@ parser.add_argument('-c', '--cv_folds', type=int, default=0)
 parser.add_argument('-k', '--topk', type=int, default=2, help='number of predicted labels to output')
 parser.add_argument('-v', '--verbosity', type=int, default=1)
 
-outname=re.sub(' ','=','_'.join(sys.argv))
+outname=re.sub(' ','=','_'.join(sys.argv[22:]))
 outname=re.sub('/','@',outname)
 
 args = parser.parse_args()
@@ -70,7 +70,9 @@ if args.verbosity>1:
     for i in random.sample(range(len(X_train)), k=5): # print 5 random docs
         print('%d\t%s' % (i+1,' '.join(X_train[i][:50])), file=sys.stderr) # i+1 aligns with line numbers
 y_train = pd.read_csv(args.annotations,header=0,index_col=0,sep='\t')
-y_train = y_train / 2  #[0..2] annotations need to match the sigmoid function
+# y_train = y_train / 2  #[0..2] annotations need to match the sigmoid function
+binfunc=lambda x : 1 if x>0.5 else 0
+y_train = y_train.applymap(binfunc) 
 if args.verbosity>0:
     print('Train data: %d train, %d labels' % (len(X_train), len(y_train)), file=sys.stderr)
 wlist=set([w for doc in X_train for w in doc])
@@ -190,14 +192,17 @@ def createmodel(mname='FT'):
     elif mname=='bilstm':
         x = Bidirectional(LSTM(100))(x)
     elif mname=='bilstma': #bilstm with attention, see https://github.com/tsterbak/keras_attention
-        d = 0.5
-        rd = 0.5
-        x = SpatialDropout1D(0.5)(x)
-        bilstm = Bidirectional(LSTM(units=128, return_sequences=True, dropout=d,
-                                    recurrent_dropout=rd))(x)
+        dpre = args.dropout
+        d = args.dropout
+        rd = args.dropout
+        x = SpatialDropout1D(dpre)(x)
+        x = Bidirectional(LSTM(units=128, return_sequences=True, dropout=d, recurrent_dropout=rd))(x)
+        # x = Bidirectional(CuDNNLSTM(units=128, return_sequences = True, name='lstm'))(x)
+        x = SpatialDropout1D(d)(x)
         x, attn = AttentionWeightedAverage(return_attention=True)(x)
     else:
         x = GlobalMaxPooling1D()(x) # a simple imitation of fasttext
+        x, attn = AttentionWeightedAverage(return_attention=True)(x)
     x = Dropout(args.dropout)(x)
     output = Dense(y_train.shape[1], activation='sigmoid')(x)
     model = Model(inputs=inp, outputs=output)
@@ -230,9 +235,9 @@ if args.cv_folds>0:
         score=metrics.pairwise.cosine_similarity(kfold_y_test, predict_t[test_index]).mean()
         scores_t.append(score)
         if args.verbosity>0:
-            print('Cosine similarity %.3f' % score, file=sys.stderr)
+            print('Cosine similarity %.3f' % score)
     if args.verbosity>0:
-        print('Total CV score (%d folds) is %.3f (+/- %0.3f)' % (args.cv_folds,np.mean(scores_t), 2*np.std(scores_t)), file=sys.stderr)
+        print('Total CV cosine score (%d folds) is %.3f (+/- %0.3f)' % (args.cv_folds,np.mean(scores_t), 2*np.std(scores_t)))
 else:
     if args.verbosity>0:
         print('Building a model for the full set', file=sys.stderr)
