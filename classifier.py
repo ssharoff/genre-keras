@@ -40,7 +40,7 @@ parser.add_argument('-d', '--dictionary', type=str, help='frequencies and POS an
 parser.add_argument('-f', '--frqlimit', type=int, default=1500, help='how many words left with their forms')
 parser.add_argument('-x', '--maxlen', type=int, default=400, help='to shorten docs')
 parser.add_argument('-g', '--gensplit', type=int, default=0, help='to generate extra examples if longer than maxlen')
-parser.add_argument('-w', '--wordlist', type=str, help='extra words to add to the lexicon')
+parser.add_argument('-w', '--wordlist', type=str, help='extra words to add to the lexicon for testing')
 parser.add_argument('-l', '--loss', type=str, default='binary_crossentropy', help='loss for training from keras')
 parser.add_argument('-m', '--metrics', type=str, default='mae', help='metrics from keras')
 parser.add_argument('-b', '--batch_size', type=int, default=64)
@@ -63,8 +63,9 @@ if args.verbosity>0:
 
 dictlist,frqlist=ut.readfrqdict(args.dictionary,args.frqlimit)
 
+usejson=True if args.inputfile.endswith('.json') else False
 with open(args.inputfile) as f:
-    X_train=[ut.mixedstr(l,dictlist,frqlist) for l in f]
+    X_train=[ut.mixedstr(l,dictlist,frqlist,usejson) for l in f]
 if args.verbosity>1:
     print('Train samples from %s' % args.inputfile, file=sys.stderr)
     for i in random.sample(range(len(X_train)), k=5): # print 5 random docs

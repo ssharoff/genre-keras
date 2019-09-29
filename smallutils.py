@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*- 
 
-import string, re
+import string, re, json
 import numpy as np
 from collections import defaultdict
 
@@ -58,17 +58,29 @@ def readfrqdict(dfile,limit=3000):
 def tokeniseall(s):
     return re.sub(punct,r' \1 ',s)
 
-def mixedstr(l,dictl,frq):
+def mixedstr(l,dictl,frq, jason=False):
     '''
     It outputs a mixed representation for a string: the words outside the frq list
     are replaced with their dictl codes (usually their POS)
+    The json representation is [wform,lemma,POS,fine-grained]
     '''
     def convertword(w):
-        wl=w.lower()
+        knownpos=None
+        wl=''
+        if isinstance(w, str):
+            wl=w.lower()
+        elif isinstance(w, list):
+            wl=w[0].lower()
+            knownpos=w[2]
+        else:
+            print(w,file=sys.stderr)
+            print(type(w),file=sys.stderr)
         if (wl in frq) or (wl[:9]=='__label__'):
             out=wl
         elif w[0].isdigit():
             out='[#]'
+        elif knownpos:
+            out=knownpos
         elif wl in dictl:
             out=dictl[wl]
         elif w[0].isupper():
@@ -82,7 +94,11 @@ def mixedstr(l,dictl,frq):
         else: 
             out='RAREPUNCT'
         return(out)
-    outdoc=[convertword(w) for w in tokeniseall(l.strip()).split()]
+    if jason:
+        text=json.loads(l)
+    else:
+        text=tokeniseall(l.strip()).split()
+    outdoc=[convertword(w) for w in text]
     return outdoc
 
 def readtrain(filename, vocab_set, multilabel=0):
