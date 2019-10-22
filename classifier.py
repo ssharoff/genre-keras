@@ -15,6 +15,7 @@ import numpy as np
 import smallutils as ut
 
 import argparse
+import pickle
 
 from keras.preprocessing import sequence
 from keras.models import Model, Input, load_model
@@ -32,6 +33,7 @@ from sklearn.model_selection import KFold
 
 parser = argparse.ArgumentParser(description="A Keras Model for Genre Classification")
 parser.add_argument('--mname', type=str, default='bilstma', help='Model type')
+parser.add_argument('--testmodel', type=str, help='Save model file in H5')
 parser.add_argument('-1', '--embeddings', type=str, help='source embeddings')
 parser.add_argument('-i', '--inputfile', type=str, help='one-doc-per-line training corpus')
 parser.add_argument('-t', '--testfile', type=str, help='one-doc-per-line test only corpus')
@@ -65,6 +67,8 @@ dictlist,frqlist=ut.readfrqdict(args.dictionary,args.frqlimit)
 
 usejson=True if args.inputfile.endswith('.json') else False
 with open(args.inputfile) as f:
+    l=f.readline()
+    s1=ut.mixedstr(l,dictlist,frqlist,usejson)
     X_train=[ut.mixedstr(l,dictlist,frqlist,usejson) for l in f]
 if args.verbosity>1:
     print('Train samples from %s' % args.inputfile, file=sys.stderr)
@@ -239,11 +243,21 @@ if args.cv_folds>0:
             print('Cosine similarity %.3f' % score)
     if args.verbosity>0:
         print('Total CV cosine score (%d folds) is %.3f (+/- %0.3f)' % (args.cv_folds,np.mean(scores_t), 2*np.std(scores_t)))
+elif args.testmodel:
+    model = load_model()
+    w2i = pickle.load(args.testmodel+'.map')
 else:
     if args.verbosity>0:
         print('Building a model for the full set', file=sys.stderr)
     model=createmodel(args.mname)
     hist = model.fit(x_train, y_train.values, batch_size=args.batch_size, epochs=args.epochs, validation_split=args.valsplit, verbose=args.verbosity)
+    model_filename = '%s_%s.h5' % (args.annotations, args.mname)
+
+    pickle.dump(w2i, open('%s.map' % model_filename, 'wb'))
+    print('Mappings of words to representations in the model are saved to %s.map' % model_filename, file=sys.stderr)
+    model.save(model_filename)
+    print('My production model saved to', model_filename, file=sys.stderr)
+
 traintime=int(time.time())
 if args.verbosity>0:
     print('Train time: %d sec' % (traintime-loadtime), file=sys.stderr)

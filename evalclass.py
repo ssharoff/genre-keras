@@ -1,24 +1,35 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*- 
 
-# Copyright (C) 2018  Serge Sharoff
+# Copyright (C) 2017  Serge Sharoff
 # This program is free software under GPL 3, see http://www.gnu.org/licenses/
 # A simple evaluation tool for P@k R@k for each category
-# Prediction file:
-#__label__A1 0.208093 __label__A11 0.190819
+# Input is the same as output by:
+#fasttext predict-prob fold09.bin fold09.test 3 0.1
+#__label__A1 0.208093 __label__A11 0.190819 __label__A4 0.10334
 #__label__A1 0.315412 __label__A11 0.305447
 
-#Against the gold standard:
-#__label__A1 __label__A11  Сын заучивает Высоцкого наизусть . Казалось бы ,  
-#__label__A11  Лежу под одеялом в больничной палате . Мужчина 
+#Against the gold standard in a multi-label table:
+#ID A1 A4 A11
+#"11962358-livejournal" 2 0 2
 
 import sys
 import numpy as np
 # from sklearn.preprocessing import label_binarize
-from sklearn.preprocessing import MultiLabelBinarizer, OneHotEncoder
+from sklearn.preprocessing import MultiLabelBinarizer
 from sklearn import metrics
 from collections import defaultdict
 
+goldfn=sys.argv[1]
+predfn=sys.argv[2]
+ratio=0.7
+binthresh=0.5
+predPrefix='__label__'
+if len(sys.argv)>3:
+    ratio=float(sys.argv[3])
+if len(sys.argv)>4:
+    binthresh=float(sys.argv[4])
+    
 def hamming_score(y_true, y_pred):
     '''
     Compute the Hamming score (a.k.a. label-based accuracy) for the multi-label case
@@ -38,14 +49,11 @@ def hamming_score(y_true, y_pred):
     return np.mean(acc_list)
 
 
-ratio=0.7
-if len(sys.argv)>3:
-    ratio=float(sys.argv[3])
 def getfield(field):
-    if field[:10]=='__label__A':
-        x=field[10:].split()
+    if field[:len(predPrefix)]==predPrefix:
+        x=field[len(predPrefix):].split()
         try:
-            i=x[0]#i=int(x[0])
+            i=x[0]  # returning the FTD number
         except:
             print('error in processing %s' % field, file=sys.stderr)
             i=0
@@ -74,27 +82,37 @@ def readpredict(filename):
                 else:
                     break
         if len(a)==0: #wasn't able to get any value with certainty
-            a.append(0)
+            a.append('UNK')
         y.append(a)
-        print('A'+' A'.join(a))
+        print(' '.join(a))
     return y
 def readgold(filename):
-#__label__A1	__label__A11	Сын заучивает Высоцкого наизусть . Казалось бы ,
+#ID A1 A4 A11
+# "11962358-livejournal" 2 0 2
     y=[]
     ccount=defaultdict(int)
-    for line in open(filename):
-        fields = line.strip().split("\t")
-        a=[]
-        for field in fields:
-            fdi=getfield(field)
-            if fdi:
-                a.append(fdi)
-                ccount[fdi]+=1
-        y.append(a)
+    with open(filename) as f:
+        header=[x.strip('"') for x in f.readline().strip().split()]
+        for i,cat in enumerate(header[1:]):
+            ccount[cat]=i
+        for line in f:
+            fields = line.strip().split()
+            a=[]
+            for i,field in enumerate(fields[1:]):
+                try:
+                    value=float(field)
+                except:
+                    print('Error: %s[%i]: %s' % (fields[i+1], i+1, line),file=sys.stderr)
+                    value = 0
+                if value>binthresh:
+                    a.append(header[i+1])
+            y.append(a)
     return y, ccount
 
-y,ccount=readgold(sys.argv[1])
-predictions=readpredict(sys.argv[2])
+y,ccount=readgold(goldfn)
+predictions=readpredict(predfn)
+if len(predictions)>len(y):  # in case we added other texts
+    predictions=predictions[:len(y)]
 mlb = MultiLabelBinarizer()
 yfull = y + predictions
 yfull = mlb.fit_transform(yfull)
@@ -120,15 +138,12 @@ average_precision = dict()
 for i in range(n_classes):
     precision[i], recall[i], thresholds[i] = metrics.precision_recall_curve(y_test[:, i],
                                                          y_predictions[:, i])
-    #average_precision[i] = metrics.label_ranking_average_precision_score(y_test[:, i], y_predictions[:, i])
     average_precision[i] = metrics.average_precision_score(y_test[:, i], y_predictions[:, i])
-    #average_precision[i] = hamming_score(y_test[:, i], y_predictions[:, i])
-    #print(precision[i], file=sys.stderr)
     p1 = metrics.recall_score(y_test[:, i], y_predictions[:, i])
     accuracy = metrics.accuracy_score(y_test[:, i], y_predictions[:, i])
     f1 = metrics.f1_score(y_test[:, i], y_predictions[:, i])
     # f1 = metrics.hamming_loss(y_test[:, i], y_predictions[:, i])
-    print("A%s (%i)\tAP: %0.3f\tP1: %0.3f\tF1: %0.3f" % (mlb.classes_[i],ccount[mlb.classes_[i]], p1, average_precision[i], f1), file=sys.stderr)
+    print("%s (%i)\tAP: %0.3f\tP: %0.3f\tF1: %0.3f" % (mlb.classes_[i],ccount[mlb.classes_[i]], p1, average_precision[i], f1), file=sys.stderr)
 
 # precision["micro"], recall["micro"], _ = metrics.precision_recall_curve(y_test.ravel(),
 #     y_predictions.ravel())
