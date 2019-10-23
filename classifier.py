@@ -67,8 +67,6 @@ dictlist,frqlist=ut.readfrqdict(args.dictionary,args.frqlimit)
 
 usejson=True if args.inputfile.endswith('.json') else False
 with open(args.inputfile) as f:
-    l=f.readline()
-    s1=ut.mixedstr(l,dictlist,frqlist,usejson)
     X_train=[ut.mixedstr(l,dictlist,frqlist,usejson) for l in f]
 if args.verbosity>1:
     print('Train samples from %s' % args.inputfile, file=sys.stderr)
@@ -244,19 +242,18 @@ if args.cv_folds>0:
     if args.verbosity>0:
         print('Total CV cosine score (%d folds) is %.3f (+/- %0.3f)' % (args.cv_folds,np.mean(scores_t), 2*np.std(scores_t)))
 elif args.testmodel:
-    model = load_model()
-    w2i = pickle.load(args.testmodel+'.map')
+    model = load_model(args.testmodel,custom_objects={'AttentionWeightedAverage':AttentionWeightedAverage})
+    w2i = pickle.load(open(args.testmodel+'.map','rb'))
 else:
     if args.verbosity>0:
-        print('Building a model for the full set', file=sys.stderr)
+        print('Building a model for the full set, %i ol %i csv' % (len(x_train), len(y_train.values)), file=sys.stderr)
     model=createmodel(args.mname)
     hist = model.fit(x_train, y_train.values, batch_size=args.batch_size, epochs=args.epochs, validation_split=args.valsplit, verbose=args.verbosity)
-    model_filename = '%s_%s.h5' % (args.annotations, args.mname)
-
-    pickle.dump(w2i, open('%s.map' % model_filename, 'wb'))
-    print('Mappings of words to representations in the model are saved to %s.map' % model_filename, file=sys.stderr)
-    model.save(model_filename)
-    print('My production model saved to', model_filename, file=sys.stderr)
+    # model_filename = '%s_%s.h5' % (args.annotations, args.mname)
+    # pickle.dump(w2i, open('%s.map' % model_filename, 'wb'))
+    # print('Mappings of words to representations in the model are saved to %s.map' % model_filename, file=sys.stderr)
+    # model.save(model_filename)
+    # print('My production model saved to ', model_filename, file=sys.stderr)
 
 traintime=int(time.time())
 if args.verbosity>0:
@@ -277,6 +274,12 @@ if args.testfile:
                 x_testdoc.append(w2i[w])
             x_test = sequence.pad_sequences([x_testdoc], maxlen=args.maxlen)
             predict_t = model.predict(x_test, batch_size=args.batch_size, verbose=args.verbosity)
+# So far loading from the h5 file does not work
+# File "classifier.py", line 277, in <module>
+#     predict_t = model.predict(x_test, batch_size=args.batch_size, verbose=args.verbosity)
+# File "python-3.6.0/lib/python3.6/site-packages/Keras-2.0.9-py3.6.egg/keras/engine/training.py", line 1730, in predict
+# File "python3.6/site-packages/Keras-2.0.9-py3.6.egg/keras/engine/training.py", line 154, in _standardize_input_data
+# ValueError: Error when checking : expected input_1 to have shape (None, 500) but got array with shape (1, 400)    
             for fscores in predict_t:
                 outstr=['__label__%s %.3f' % (y_train.columns[i], fscores[i])  for i in np.argsort(-fscores)[:args.topk]]
                 print('\t'.join(outstr), file=outf)
