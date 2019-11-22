@@ -22,10 +22,9 @@ from keras.models import Model, Input, load_model
 from keras.layers import Dense, Embedding, GlobalMaxPooling1D, SpatialDropout1D, Conv1D, MaxPooling1D, LSTM, Bidirectional, Dropout, concatenate, InputSpec, CuDNNLSTM
 
 from keras.optimizers import Adam
-from keras import backend
 
 from keras.engine.topology import Layer
-from keras import initializers as initializers, regularizers, constraints
+from keras import initializers
 from keras import backend as K
 
 from sklearn import metrics
@@ -34,12 +33,13 @@ from sklearn.model_selection import KFold
 parser = argparse.ArgumentParser(description="A Keras Model for Genre Classification")
 parser.add_argument('--mname', type=str, default='bilstma', help='Model type')
 parser.add_argument('--testmodel', type=str, help='Save model file in H5')
-parser.add_argument('-1', '--embeddings', type=str, help='source embeddings')
-parser.add_argument('-i', '--inputfile', type=str, help='one-doc-per-line training corpus')
+parser.add_argument('-p', '--prefix', type=str, default='', help='defaults for embeddings, input files, annotations and dictionaries')
+parser.add_argument('-1', '--embeddings', type=str, default='.vec', help='source embeddings')
+parser.add_argument('-i', '--inputfile', type=str, default='.ol', help='one-doc-per-line training corpus')
 parser.add_argument('-t', '--testfile', type=str, help='one-doc-per-line test only corpus')
-parser.add_argument('-a', '--annotations', type=str, help='tab-separated FTDs with the header and text ids')
-parser.add_argument('-d', '--dictionary', type=str, help='frequencies and POS annotations')
-parser.add_argument('-f', '--frqlimit', type=int, default=1500, help='how many words left with their forms')
+parser.add_argument('-a', '--annotations', type=str, default='.csv', help='tab-separated FTDs with the header and text ids')
+parser.add_argument('-d', '--dictionary', type=str, default='.brieftag.num', help='frequencies and POS annotations')
+parser.add_argument('-f', '--frqlimit', type=int, default=4500, help='how many words left with their forms')
 parser.add_argument('-x', '--maxlen', type=int, default=400, help='to shorten docs')
 parser.add_argument('-g', '--gensplit', type=int, default=0, help='to generate extra examples if longer than maxlen')
 parser.add_argument('-w', '--wordlist', type=str, help='extra words to add to the lexicon for testing')
@@ -51,10 +51,10 @@ parser.add_argument( '--dropout', type=float, default=0.2)
 parser.add_argument( '--valsplit', type=float, default=0.05)
 parser.add_argument('-s', '--seed', type=int, default=42)
 parser.add_argument('-c', '--cv_folds', type=int, default=0)
-parser.add_argument('-k', '--topk', type=int, default=2, help='number of predicted labels to output')
+parser.add_argument('-k', '--topk', type=int, default=2, help='topK predicted labels to output')
 parser.add_argument('-v', '--verbosity', type=int, default=1)
 
-outname=re.sub(' ','=','_'.join(sys.argv[22:]))
+outname=re.sub(' ','=','_'.join(sys.argv[min(len(sys.argv),22):]))  # to refrain from adding mantra parameters
 outname=re.sub('/','@',outname)
 
 args = parser.parse_args()
@@ -62,6 +62,12 @@ ut.verbosity=args.verbosity
 np.random.seed(args.seed)
 if args.verbosity>0:
     print('Parameter list: %s' % outname, file=sys.stderr)
+
+
+if len(args.prefix)>0:
+    args.dictionary=args.prefix+args.dictionary
+    args.inputfile=args.prefix+args.inputfile
+    args.embeddings=args.prefix+args.embeddings
 
 dictlist,frqlist=ut.readfrqdict(args.dictionary,args.frqlimit)
 
@@ -73,9 +79,9 @@ if args.verbosity>1:
     for i in random.sample(range(len(X_train)), k=5): # print 5 random docs
         print('%d\t%s' % (i+1,' '.join(X_train[i][:50])), file=sys.stderr) # i+1 aligns with line numbers
 y_train = pd.read_csv(args.annotations,header=0,index_col=0,sep='\t')
-# y_train = y_train / 2  #[0..2] annotations need to match the sigmoid function
-binfunc=lambda x : 1 if x>0.5 else 0
-y_train = y_train.applymap(binfunc) 
+y_train = y_train / 2  #[0..2] annotations need to match the sigmoid function
+# binfunc=lambda x : 1 if x>0.5 else 0
+# y_train = y_train.applymap(binfunc) 
 if args.verbosity>0:
     print('Train data: %d train, %d labels' % (len(X_train), len(y_train)), file=sys.stderr)
 wlist=set([w for doc in X_train for w in doc])
@@ -224,7 +230,7 @@ if args.cv_folds>0:
         kfold_X_test = x_train[test_index]
         kfold_y_test = y_train.values[test_index]
         kfold_y_train = y_train.values[train_index]
-        backend.clear_session()
+        K.clear_session()
         model=createmodel(args.mname)
 
         hist = model.fit(kfold_X_train, kfold_y_train, batch_size=args.batch_size, epochs=args.epochs, validation_split=args.valsplit, verbose=args.verbosity)
