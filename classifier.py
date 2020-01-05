@@ -45,8 +45,9 @@ parser.add_argument('-g', '--gensplit', type=int, default=0, help='to generate e
 parser.add_argument('-w', '--wordlist', type=str, help='extra words to add to the lexicon for testing')
 parser.add_argument('-l', '--loss', type=str, default='binary_crossentropy', help='loss for training from keras')
 parser.add_argument('-m', '--metrics', type=str, default='mae', help='metrics from keras')
-parser.add_argument('-b', '--batch_size', type=int, default=64)
 parser.add_argument('-e', '--epochs', type=int, default=10)
+parser.add_argument('-b', '--binary', type=float, default=0)
+parser.add_argument( '--batch_size', type=int, default=64)
 parser.add_argument( '--dropout', type=float, default=0.2)
 parser.add_argument( '--valsplit', type=float, default=0.05)
 parser.add_argument('-s', '--seed', type=int, default=42)
@@ -54,7 +55,7 @@ parser.add_argument('-c', '--cv_folds', type=int, default=0)
 parser.add_argument('-k', '--topk', type=int, default=2, help='topK predicted labels to output')
 parser.add_argument('-v', '--verbosity', type=int, default=1)
 
-outname=re.sub(' ','=','_'.join(sys.argv[min(len(sys.argv),22):]))  # to refrain from adding mantra parameters
+outname=re.sub(' ','=','_'.join(sys.argv[min(len(sys.argv),22):]))  # to refrain from adding mantra parameters to the file name
 outname=re.sub('/','@',outname)
 
 args = parser.parse_args()
@@ -79,9 +80,13 @@ if args.verbosity>1:
     for i in random.sample(range(len(X_train)), k=5): # print 5 random docs
         print('%d\t%s' % (i+1,' '.join(X_train[i][:50])), file=sys.stderr) # i+1 aligns with line numbers
 y_train = pd.read_csv(args.annotations,header=0,index_col=0,sep='\t')
-y_train = y_train / 2  #[0..2] annotations need to match the sigmoid function
-# binfunc=lambda x : 1 if x>0.5 else 0
-# y_train = y_train.applymap(binfunc) 
+if args.binary>0:
+    binfunc=lambda x : 1 if x>args.binary else 0
+    y_train = y_train.applymap(binfunc)
+else:
+    maxval=y_train.max()
+    y_train = y_train / maxval  #[0..2] annotations need to be within the range of the sigmoid function
+
 if args.verbosity>0:
     print('Train data: %d train, %d labels' % (len(X_train), len(y_train)), file=sys.stderr)
 wlist=set([w for doc in X_train for w in doc])
