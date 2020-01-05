@@ -58,7 +58,14 @@ def readfrqdict(dfile,limit=3000):
 def tokeniseall(s):
     return re.sub(punct,r' \1 ',s)
 
-def mixedstr(l,dictl,frq, jason=False):
+def getlabels(values,columns,lim=0.5):
+    out=[]
+    for i,value in enumerate(values):
+        if value>lim:
+            out.append('__label__'+columns[i])
+    return ' '.join(out)
+
+def mixedstr(l,dictl,frq, jason=False, maxlen=0):
     '''
     It outputs a mixed representation for a string: the words outside the frq list
     are replaced with their dictl codes (usually their POS)
@@ -98,6 +105,9 @@ def mixedstr(l,dictl,frq, jason=False):
         text=json.loads(l)
     else:
         text=tokeniseall(l.strip()).split()
+    if maxlen>0 and len(text)>maxlen:
+        startpos=np.random.random_integers(len(text)-maxlen)
+        text=text[startpos:startpos+maxlen]
     outdoc=[convertword(w) for w in text]
     return outdoc
 
@@ -207,6 +217,8 @@ def make_y(id2row,wlist,annot):
             vocab.append(w)
             y.append(annot[i])
     return vocab,y
+
+
 
 class Space(object):
 

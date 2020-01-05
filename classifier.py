@@ -74,7 +74,7 @@ dictlist,frqlist=ut.readfrqdict(args.dictionary,args.frqlimit)
 
 usejson=True if args.inputfile.endswith('.json') else False
 with open(args.inputfile) as f:
-    X_train=[ut.mixedstr(l,dictlist,frqlist,usejson) for l in f]
+    X_train=[ut.mixedstr(l,dictlist,frqlist,usejson,maxlen=args.maxlen) for l in f]
 y_train = pd.read_csv(args.annotations,header=0,index_col=0,sep='\t')
 if args.binary>0:
     binfunc=lambda x : 1 if x>args.binary else 0
@@ -88,7 +88,7 @@ if args.verbosity>0:
     if args.verbosity>1:
         print('Train samples from %s' % args.inputfile, file=sys.stderr)
         for i in random.sample(range(len(X_train)), k=5): # print 5 random docs
-            labels=','.join(y_train.values[i]) #ut.getlabels(y_train.iloc[i])
+            labels=ut.getlabels(y_train.values[i],y_train.columns) # ','.join(['%.1f' % x for x in y_train.values[i]]) 
             print('%d\t%s\t%s' % (i+1, labels, ' '.join(X_train[i][:50])), file=sys.stderr) # i+1 aligns with line numbers
 wlist=set([w for doc in X_train for w in doc])
 if args.wordlist:
