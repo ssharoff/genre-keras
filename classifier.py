@@ -74,7 +74,7 @@ dictlist,frqlist=ut.readfrqdict(args.dictionary,args.frqlimit)
 
 usejson=True if args.inputfile.endswith('.json') else False
 with open(args.inputfile) as f:
-    X_train=[ut.mixedstr(l,dictlist,frqlist,usejson,maxlen=args.maxlen) for l in f]
+    X_train=[ut.mixedstr(l,dictlist,frqlist,usejson) for l in f]
 y_train = pd.read_csv(args.annotations,header=0,index_col=0,sep='\t')
 if args.binary>0:
     binfunc=lambda x : 1 if x>args.binary else 0
@@ -104,7 +104,14 @@ if args.verbosity>0:
 
 x_train=[]
 for doc in X_train:
-    x_train.append([w2i[w] for w in doc])
+    if args.maxlen>0 and len(doc)>args.maxlen:
+        startpos=np.random.random_integers(len(doc)-args.maxlen)
+        endpos=startpos+args.maxlen
+    else:
+        startpos=0
+        endpos=len(doc)
+    x_train.append([w2i[w] for w in doc[startpos:endpos]])
+    
 if not sp.shape[0]==len(w2i):
     print('!!ERROR: Old lex size: %d, new %d. Offending words' % (sp.shape[0], len(w2i)), file=sys.stderr)
     for w in w2i:
