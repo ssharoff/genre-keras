@@ -275,37 +275,40 @@ else:
     # print('My production model saved to ', model_filename, file=sys.stderr)
 
 traintime=int(time.time())
-if args.verbosity>0:
-    print('Train time: %d sec' % (traintime-loadtime), file=sys.stderr)
 
-if args.testfile:
-    if args.verbosity>0:
-        print('Predicting on the test set', file=sys.stderr)
-    if args.testfile:
-        f=sys.stdin if args.testfile=='-' else ut.myopen(args.testfile)
-        outf=open(outname+'.pred',"w")
-        for l in f:
-            X_testdoc=ut.mixedstr(l,dictlist,frqlist)
-            x_testdoc=[]
-            for w in X_testdoc:
-                if not w in w2i:
-                    w='<unk>'
-                x_testdoc.append(w2i[w])
-            x_test = sequence.pad_sequences([x_testdoc], maxlen=args.maxlen)
-            predict_t = model.predict(x_test, batch_size=args.batch_size, verbose=args.verbosity)
 # So far loading from the h5 file does not work
 # File "classifier.py", line 277, in <module>
 #     predict_t = model.predict(x_test, batch_size=args.batch_size, verbose=args.verbosity)
 # File "python-3.6.0/lib/python3.6/site-packages/Keras-2.0.9-py3.6.egg/keras/engine/training.py", line 1730, in predict
 # File "python3.6/site-packages/Keras-2.0.9-py3.6.egg/keras/engine/training.py", line 154, in _standardize_input_data
 # ValueError: Error when checking : expected input_1 to have shape (None, 500) but got array with shape (1, 400)    
-            for fscores in predict_t:
-                outstr=['__label__%s %.3f' % (y_train.columns[i], fscores[i])  for i in np.argsort(-fscores)[:args.topk]]
-                print('\t'.join(outstr), file=outf)
+
+if args.verbosity>0:
+    print('Train time: %d sec' % (traintime-loadtime), file=sys.stderr)
+
+if args.testfile:
+    if args.verbosity>0:
+        print('Predicting on the test set %s into %s' % (args.testfile, outname), file=sys.stderr)
+    f=sys.stdin if args.testfile=='-' else ut.myopen(args.testfile)
+    outf=open(outname+'.pred',"w")
+    for l in f:
+        X_testdoc=ut.mixedstr(l,dictlist,frqlist)
+        x_testdoc=[]
+        for w in X_testdoc:
+            if not w in w2i:
+                w='<unk>'
+            x_testdoc.append(w2i[w])
+        x_test = sequence.pad_sequences([x_testdoc], maxlen=args.maxlen)
+        predict_t = model.predict(x_test, batch_size=args.batch_size, verbose=args.verbosity)
+        for fscores in predict_t:
+            outstr=['__label__%s %.3f' % (y_train.columns[i], fscores[i])  for i in np.argsort(-fscores)[:args.topk]]
+            print('\t'.join(outstr), file=outf)
 #model.save(outname+'.hd5')
 #pickle.dump(w2i,open(outname+'w2i.pkl',"wb"))
 # x = load_model(args.method+'.hd5')
 # y_hat=x.predict(x_test)
+
+outf.close()
 testtime=int(time.time())
 if args.verbosity>0:
     print('Test time: %d sec' % (testtime-traintime), file=sys.stderr)
