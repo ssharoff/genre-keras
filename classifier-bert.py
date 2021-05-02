@@ -107,7 +107,7 @@ else:
         y_train = y_train.applymap(binfunc)
     else:
         maxval=y_train.max()
-        y_train = y_train / maxval  #[0..2] annotations need to be within
+        y_train = y_train / maxval  #[0..2] need to be within the softmax output range
     train_df=pd.DataFrame([docs, y_train.values], index=['text','labels']).T
     trainX, evalX = train_test_split(train_df, test_size=0.1)
     if args.verbosity>0:
