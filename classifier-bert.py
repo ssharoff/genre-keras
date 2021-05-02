@@ -21,7 +21,8 @@ from sklearn.model_selection import train_test_split
 import simpletransformers
 
 from simpletransformers.classification import (
-    MultiLabelClassificationModel, MultiLabelClassificationArgs
+    MultiLabelClassificationModel, MultiLabelClassificationArgs, ClassificationModel, ClassificationArgs
+
 )
 
 def printpredict(raw_outputs, outf):
@@ -85,10 +86,17 @@ y_train = pd.read_csv(args.annotations,header=0,index_col=0,sep='\t')
 outf=open(outname+'.pred',"w")
    
 if args.testmodel:
-    model_args = MultiLabelClassificationArgs(
-        max_seq_length=args.maxlen,
-        process_count = 11)
-    model = MultiLabelClassificationModel(args.cname, args.testmodel, args = model_args, use_cuda = args.gpu)
+    if y_train.shape[1]>1:
+        model_args = MultiLabelClassificationArgs(
+            max_seq_length=args.maxlen,
+            process_count = 11)
+        model = MultiLabelClassificationModel(args.cname, args.testmodel, args = model_args, use_cuda = args.gpu)
+    else:
+        model_args = ClassificationArgs(
+            max_seq_length=args.maxlen,
+            process_count = 11)
+        model = ClassificationModel(args.cname, args.testmodel, args = model_args, use_cuda = args.gpu)
+        
     if args.verbosity>0:
         print(model.config, file=sys.stderr)
 else:
@@ -108,24 +116,43 @@ else:
         print(evalX.head()[['labels']], file=sys.stderr)
         print(evalX.head()[['text']], file=sys.stderr)
 
-    model_args = MultiLabelClassificationArgs(
-        num_train_epochs=args.epochs,
-        max_seq_length=args.maxlen,
-        evaluate_during_training=True,
-        save_eval_checkpoints=False,
-        save_steps=-1,
-        use_early_stopping=True,
-        early_stopping_delta=0.01,
-        reprocess_input_data=False,
-        evaluate_during_training_verbose=args.verbosity,
-        output_dir=outname,
-        manual_seed = args.seed,
-        # cache_dir
-        # best_model_dir
-        process_count = 10)
+    if y_train.shape[1]>1:
+        model_args = MultiLabelClassificationArgs(
+            num_train_epochs=args.epochs,
+            max_seq_length=args.maxlen,
+            evaluate_during_training=True,
+            save_eval_checkpoints=False,
+            save_steps=-1,
+            use_early_stopping=True,
+            early_stopping_delta=0.01,
+            reprocess_input_data=False,
+            evaluate_during_training_verbose=args.verbosity,
+            output_dir=outname,
+            manual_seed = args.seed,
+            # cache_dir
+            # best_model_dir
+            process_count = 10)
 
-    model = MultiLabelClassificationModel(args.cname, args.mname, num_labels=y_train.shape[1], use_cuda = args.gpu, args=model_args)
+        model = MultiLabelClassificationModel(args.cname, args.mname, num_labels=y_train.shape[1], use_cuda = args.gpu, args=model_args)
+    else:
+        model_args = ClassificationArgs(
+            num_train_epochs=args.epochs,
+            max_seq_length=args.maxlen,
+            evaluate_during_training=True,
+            save_eval_checkpoints=False,
+            save_steps=-1,
+            use_early_stopping=True,
+            early_stopping_delta=0.01,
+            reprocess_input_data=False,
+            evaluate_during_training_verbose=args.verbosity,
+            output_dir=outname,
+            manual_seed = args.seed,
+            # cache_dir
+            # best_model_dir
+            process_count = 10)
 
+        model = ClassificationModel(args.cname, args.mname, num_labels=y_train.shape[1], use_cuda = args.gpu, args=model_args)
+        
     model.train_model(trainX,eval_df=evalX)
     print(evalX.head()['text'], file=sys.stderr)
     predictions, raw_outputs = model.predict(evalX['text'].tolist())
