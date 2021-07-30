@@ -12,10 +12,11 @@ import argparse
 
 from sklearn.model_selection import KFold
 
-def createfold(fname,f,fnum,index): # f=train|test
-    with open(f'{fname}/{f}{fnum}.ol', 'w') as fout:
+def createfold(fname,f,index): # fname is the output  dir, f=train|test
+    with open(f'{fname}/{f}.ol', 'w') as fout:
         for i in index:
             fout.write(x_train[i])
+    y_train.iloc[index].to_csv(f'{fname}/{f}.csv', sep='\t')
 
 parser = argparse.ArgumentParser(description="A fold generator")
 parser.add_argument('-p', '--prefix', type=str, default='', help='defaults for embeddings, input files, annotations and dictionaries')
@@ -30,7 +31,7 @@ outname=re.sub('/','@',outname)
 
 args = parser.parse_args()
 if args.verbosity>0:
-    print('Parameter list: %s' % outname, file=sys.stderr)
+    print(f'Parameter list: {outname}', file=sys.stderr)
 
 
 if len(args.prefix)>0:
@@ -43,15 +44,15 @@ with open(args.inputfile) as f:
 y_train = pd.read_csv(args.annotations,header=0,index_col=0,sep='\t')
 
 if args.verbosity>0:
-    print('Train data: %d train, %d labels' % (len(x_train), len(y_train)), file=sys.stderr)
+    print(f'Train data: {len(x_train)} train, {len(y_train)} labels', file=sys.stderr)
 
 kf = KFold(n_splits=args.cv_folds, shuffle=True, random_state=args.seed)
 fnum=1
 for train_index, test_index in kf.split(x_train):
     fname='f'+str(fnum)
     os.mkdir(fname)
-    createfold(fname,'ftrain',fnum,train_index)
-    createfold(fname,'ftest',fnum,test_index)
-    y_train.iloc[test_index].to_csv(f'{fname}/ftest{fnum}.csv', sep='\t')
-    y_train.iloc[train_index].to_csv(f'{fname}/ftrain{fnum}.csv', sep='\t')
+    createfold(fname,'ftrain',train_index)
+    createfold(fname,'ftest',test_index)
+    if args.verbosity>1:
+        print(f'Fold{fnum}: {len(train_index)} in train, {len(test_index)} in test', file=sys.stderr)
     fnum+=1
