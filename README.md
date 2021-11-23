@@ -1,5 +1,19 @@
 # Neural network for genre classification
 
+This repository contains two classifiers. One is the older LSTM-based version, see below. The other is the more modern BERT-based version, which has been tested with a number of transformer models, most successfully with XLM-Roberta.  The usage is:
+
+`./classifier-bert.py -p en -e 3'
+
+(use any other parameters from running `./classifier-bert.py -h`. Empirically, training beyond three epochs is not needed).
+
+For testing 
+
+`./classifier-bert.py -p en --testmodel MNAME -t FNAME'
+
+where MNAME is the directory with the latest checkpoint and FNAME is a corpus in the one-line-per-document format.
+
+# LSTMs for genre classification
+
 This is a simple neural classifier which aims at providing text classification using a mixed representation, which uses the most common words and the Part-Of-Speech tags for the less common words.  The idea is that this captures the genre categories without relying too much on keywords specific to the training corpus.  For example, a review text:
 
 `It won the SCBWI Golden Kite Award for best nonfiction book of 1999 and has sold about 50,000 copies.`
