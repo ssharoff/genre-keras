@@ -1,20 +1,34 @@
 # Neural network for genre classification
 
-This repository contains two classifiers. One is the older LSTM-based version, see below. The other is the more modern BERT-based version, which has been tested with a number of transformer models, most successfully with XLM-Roberta.  The usage is:
+This repository contains two classifiers. One is the older LSTM-based version, which gives the reason for the repository name, see the section below. 
 
-`./classifier-bert.py -p en -e 3'
+The current approach uses the more modern BERT-based transformers and it has been tested with a number of transformer models, most successfully with XLM-Roberta.  There are two BERT-based classifiers here as well. One is based on fine-tuned HuggingFace transformers, which is the easiest to apply to a new corpus formatted as one document per line:
 
-(use any other parameters from running `./classifier-bert.py -h`. Empirically, training beyond three epochs is not needed).
+```
+./thub-genres-apply.py sharoff/genres FNAME
+```
 
-For testing 
+with minimal dependencies (the extra modules to install are pytorch and transformers).
 
-`./classifier-bert.py -p en --testmodel MNAME -t FNAME'
+For your own fine-tuning experiments it is probably easier to use the other version, which is based on simplified transformers.  The usage is:
+
+```
+./classifier-bert.py -p en -e 3
+```
+
+(use any other parameters `./classifier-bert.py -h`. Empirically, training beyond three epochs is not needed).
+
+For testing this model use
+
+```
+./classifier-bert.py -p en --testmodel MNAME -t FNAME
+```
 
 where MNAME is the directory with the latest checkpoint and FNAME is a corpus in the one-line-per-document format.
 
 # LSTMs for genre classification
 
-This is a simple neural classifier which aims at providing text classification using a mixed representation, which uses the most common words and the Part-Of-Speech tags for the less common words.  The idea is that this captures the genre categories without relying too much on keywords specific to the training corpus.  For example, a review text:
+This is an older model based on a end-to-end neural classifier which aims at providing text classification using a mixed representation, which uses the most common words and the Part-Of-Speech tags for the less common words.  The idea is that this captures the genre categories without relying too much on keywords specific to the training corpus.  For example, a review text:
 
 `It won the SCBWI Golden Kite Award for best nonfiction book of 1999 and has sold about 50,000 copies.`
 
